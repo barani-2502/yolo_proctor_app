@@ -1,0 +1,94 @@
+[
+  {
+    "id": "T1",
+    "label": "Clear phone usage",
+    "expected": true,
+    "images": [
+      "Screenshot 2026-04-06 172918.png",
+      "Screenshot 2026-04-06 173046.png",
+      "Screenshot 2026-04-06 173337.png",
+      "Screenshot 2026-04-06 173410.png",
+      "Screenshot 2026-04-06 173443.png",
+      "Screenshot 2026-04-06 173749.png",
+      "Screenshot 2026-04-06 173919.png"
+    ]
+  },
+  {
+    "id": "T2",
+    "label": "Phone partially visible",
+    "expected": true,
+    "images": [
+      "Screenshot 2026-04-06 174040.png",
+      "Screenshot 2026-04-06 174750.png",
+      "Screenshot 2026-04-06 174808.png",
+      "Screenshot 2026-04-06 175046.png",
+      "Screenshot 2026-04-06 175417.png",
+      "final 2_mp4-1606.jpg"
+    ]
+  },
+  {
+    "id": "T3",
+    "label": "Phone in hand (not in use)",
+    "expected": true,
+    "images": [
+      "image.jpeg"
+    ]
+  },
+  {
+    "id": "T4",
+    "label": "No phone",
+    "expected": false,
+    "images": []
+  },
+  {
+    "id": "T5",
+    "label": "Hand near face (no phone)",
+    "expected": false,
+    "images": [
+      "image.webp"
+    ]
+  },
+  {
+    "id": "T6",
+    "label": "Low light",
+    "expected": true,
+    "images": [
+      "image (6).png"
+    ]
+  },
+  {
+    "id": "T7",
+    "label": "Occluded phone",
+    "expected": true,
+    "images": [
+      "image (7).png"
+    ]
+  },
+  {
+    "id": "T8",
+    "label": "Multiple people",
+    "expected": true,
+    "images": [
+      "image (1).webp"
+    ]
+  },
+  {
+    "id": "T9",
+    "label": "Side angle",
+    "expected": true,
+    "images": [
+      "Screenshot 2026-04-06 175801.png",
+      "Screenshot 2026-04-06 175825.png",
+      "Screenshot 2026-04-06 175844.png",
+      "Screenshot 2026-04-06 175909.png"
+    ]
+  },
+  {
+    "id": "T10",
+    "label": "Phone below frame",
+    "expected": false,
+    "images": [
+      "image (8).png"
+    ]
+  }
+]
