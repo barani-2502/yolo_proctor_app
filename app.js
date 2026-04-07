@@ -1,30 +1,48 @@
 import { loadModel, runInference, DETECTED_CLASSES } from "./runner.js";
-import { getHeapMB, formatMs } from "./perf.js";
+import { getHeapMB, formatMs, getSystemInfo, tickFPS, calculateJitter, getHeapBytes } from "./perf.js";
 import { drawDetections, getOutcome, badgeHTML, buildSummaryTable } from "./ui.js";
 
 const MODEL_PATH = "models/yolo11n.onnx";
 
-let manifest    = [];
-let currentCat  = null;
-let allResults  = [];
+let manifest = [];
+let currentCat = null;
+let allResults = [];
 let modelLoaded = false;
+let sessionMeta = {};
+let backendPreference = "gpu";
+let activeBackend = null;
 
-const catList        = document.getElementById("cat-list");
-const imageGrid      = document.getElementById("image-grid");
+const catList = document.getElementById("cat-list");
+const imageGrid = document.getElementById("image-grid");
 const resultsSection = document.getElementById("results-section");
-const loadBtn        = document.getElementById("load-btn");
-const runBtn         = document.getElementById("run-btn");
-const runCatBtn      = document.getElementById("run-cat-btn");
-const resultsBtn     = document.getElementById("results-btn");
-const modelBadge     = document.getElementById("model-badge");
-const loadingEl      = document.getElementById("loading");
-const pInf           = document.getElementById("p-inf");
-const pHeap          = document.getElementById("p-heap");
+const loadBtn = document.getElementById("load-btn");
+const runBtn = document.getElementById("run-btn");
+const runCatBtn = document.getElementById("run-cat-btn");
+const resultsBtn = document.getElementById("results-btn");
+const modelBadge = document.getElementById("model-badge");
+const loadingEl = document.getElementById("loading");
+const pInf = document.getElementById("p-inf");
+const pPrep = document.getElementById("p-prep");
+const pPost = document.getElementById("p-post");
+const pHeap = document.getElementById("p-heap");
+const pFPS = document.getElementById("p-fps");
+const pCPU = document.getElementById("p-cpu");
+const pGPU = document.getElementById("p-gpu");
+const gpuToggle = document.getElementById("gpu-toggle");
+const cpuToggle = document.getElementById("cpu-toggle");
+const reloadWarn = document.getElementById("reload-warn");
 
 async function init() {
   manifest = await fetch("manifest.json").then(r => r.json());
   renderSidebar();
   selectCategory(manifest[0]);
+
+  const info = getSystemInfo();
+  if (pCPU) pCPU.textContent = info.cpu;
+  if (pGPU) {
+    pGPU.textContent = info.gpu.length > 15 ? info.gpu.substring(0, 15) + "..." : info.gpu;
+    document.getElementById("gpu-container").title = info.gpu;
+  }
 }
 
 function renderSidebar() {
@@ -33,7 +51,7 @@ function renderSidebar() {
     const div = document.createElement("div");
     div.className = "cat-item" + (currentCat?.id === cat.id ? " active" : "");
     div.dataset.id = cat.id;
-    const res   = allResults.find(r => r.id === cat.id);
+    const res = allResults.find(r => r.id === cat.id);
     const badge = res ? badgeHTML(res.outcome) : `<span class="badge badge-pend">—</span>`;
     div.innerHTML = `
       <div class="cat-label"><span>${cat.id}</span>${badge}</div>
@@ -46,17 +64,17 @@ function renderSidebar() {
 function selectCategory(cat) {
   currentCat = cat;
   resultsSection.style.display = "none";
-  imageGrid.style.display      = "grid";
+  imageGrid.style.display = "grid";
   renderSidebar();
   renderImageGrid(cat);
 }
 
 function getFolderName(id) {
   const map = {
-    T1:"T1_clear-phone", T2:"T2_partial",    T3:"T3_hand",
-    T4:"T4_no-phone",    T5:"T5_hand-face",  T6:"T6_low-light",
-    T7:"T7_occluded",    T8:"T8_multiple",   T9:"T9_side",
-    T10:"T10_under-table"
+    T1: "T1_clear-phone", T2: "T2_partial", T3: "T3_hand",
+    T4: "T4_no-phone", T5: "T5_hand-face", T6: "T6_low-light",
+    T7: "T7_occluded", T8: "T8_multiple", T9: "T9_side",
+    T10: "T10_under-table"
   };
   return map[id] || id;
 }
@@ -68,7 +86,7 @@ function renderImageGrid(cat) {
     return;
   }
   cat.images.forEach(filename => {
-    const src  = `test-images/${getFolderName(cat.id)}/${filename}`;
+    const src = `test-images/${getFolderName(cat.id)}/${filename}`;
     const card = document.createElement("div");
     card.className = "img-card";
     card.innerHTML = `
@@ -85,7 +103,7 @@ function renderImageGrid(cat) {
     const img = new Image();
     img.onload = () => {
       const canvas = card.querySelector("canvas");
-      canvas.width  = img.naturalWidth;
+      canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
       canvas.getContext("2d").drawImage(img, 0, 0);
     };
@@ -93,19 +111,51 @@ function renderImageGrid(cat) {
   });
 }
 
+gpuToggle.onclick = () => {
+  backendPreference = "gpu";
+  gpuToggle.classList.add("active");
+  cpuToggle.classList.remove("active");
+  checkReloadRequirement();
+};
+
+cpuToggle.onclick = () => {
+  backendPreference = "cpu";
+  cpuToggle.classList.add("active");
+  gpuToggle.classList.remove("active");
+  checkReloadRequirement();
+};
+
+function checkReloadRequirement() {
+  if (modelLoaded && activeBackend !== (backendPreference === "cpu" ? "wasm" : "webgpu")) {
+    reloadWarn.style.display = "inline";
+    runBtn.disabled = true;
+    runCatBtn.disabled = true;
+  } else if (modelLoaded) {
+    reloadWarn.style.display = "none";
+    runBtn.disabled = false;
+    runCatBtn.disabled = false;
+  }
+}
+
 loadBtn.onclick = async () => {
   loadingEl.style.display = "block";
-  loadingEl.textContent   = "Loading YOLOv11 Nano…";
-  loadBtn.disabled        = true;
+  loadingEl.textContent = `Initializing ${backendPreference === "cpu" ? "WASM" : "Auto"} Backend…`;
+  loadBtn.disabled = true;
   try {
-    await loadModel(MODEL_PATH);
-    modelBadge.textContent = "YOLOv11 Nano · ready";
-    modelLoaded            = true;
-    runBtn.disabled        = false;
-    runCatBtn.disabled     = false;
+    const activeEP = await loadModel(MODEL_PATH, backendPreference === "cpu");
+    activeBackend = activeEP;
+    const epDisplay = activeEP === "webgpu" ? "WebGPU" : "WASM";
+    
+    modelBadge.textContent = `YOLOv11 Nano · ${epDisplay} Ready`;
+    modelBadge.className = activeEP === "webgpu" ? "badge gpu-active" : "badge";
+    
+    modelLoaded = true;
+    runBtn.disabled = false;
+    runCatBtn.disabled = false;
+    reloadWarn.style.display = "none";
     loadingEl.style.display = "none";
   } catch (e) {
-    loadingEl.textContent = "Failed to load model. Make sure models/yolo11n.onnx exists.";
+    loadingEl.textContent = "Failed to load model. Check console for details.";
     loadBtn.disabled = false;
     console.error(e);
   }
@@ -114,15 +164,17 @@ loadBtn.onclick = async () => {
 async function runCategory(cat) {
   if (!cat.images.length) return null;
 
-  let totalConf = 0, confCount = 0, totalMs = 0;
+  let totalConf = 0, confCount = 0, totalMs = 0, correctCount = 0;
   let allDetections = [];
+  let categoryTimes = [];
 
   for (const filename of cat.images) {
     const src = `test-images/${getFolderName(cat.id)}/${filename}`;
     const img = await loadImageElement(src);
-    const { detections, inferenceMs } = await runInference(img);
+    const { detections, inferenceMs, perf } = await runInference(img);
 
-    totalMs      += inferenceMs;
+    totalMs += inferenceMs;
+    categoryTimes.push(inferenceMs);
     allDetections = allDetections.concat(detections);
 
     const canvas = document.getElementById(`canvas-${cat.id}-${filename}`);
@@ -130,10 +182,13 @@ async function runCategory(cat) {
 
     // Per-image outcome badge
     const outcome = getOutcome(detections, cat.expected);
-    const badge   = document.getElementById(`badge-${cat.id}-${filename}`);
+    if (outcome === "tp" || outcome === "tn") correctCount++;
+
+    const badge = document.getElementById(`badge-${cat.id}-${filename}`);
     if (badge) {
-      badge.className   = `badge badge-${outcome}`;
-      badge.textContent = { pass: "✓ Correct", fail: "✗ Missed", fp: "⚠ False +" }[outcome] || "—";
+      badge.className = `badge badge-${outcome === "tp" || outcome === "tn" ? "pass" : outcome === "fp" ? "fp" : "fail"}`;
+      const badgeData = badgeHTML(outcome);
+      badge.textContent = badgeData.replace(/<[^>]*>/g, ""); // strip HTML for simple textContent
     }
 
     // Per-image detected class tags
@@ -147,46 +202,63 @@ async function runCategory(cat) {
 
     detections.forEach(d => { totalConf += d.confidence; confCount++; });
 
-    pInf.textContent  = formatMs(inferenceMs);
+    pInf.textContent = formatMs(inferenceMs);
+    pPrep.textContent = formatMs(perf.prep);
+    pPost.textContent = formatMs(perf.post);
     pHeap.textContent = getHeapMB();
+    if (pFPS) pFPS.textContent = tickFPS();
   }
 
-  // Majority vote across images in this category
-  const imageOutcomes = cat.images.map(filename => {
-    const badge = document.getElementById(`badge-${cat.id}-${filename}`);
-    if (!badge) return "pend";
-    if (badge.className.includes("pass")) return "pass";
-    if (badge.className.includes("fp"))   return "fp";
-    return "fail";
-  });
-  const counts  = imageOutcomes.reduce((a, b) => { a[b] = (a[b] || 0) + 1; return a; }, {});
-  const outcome = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || "pend";
+  // Outcome mapped to standard TP/TN/FP/FN for the summary row
+  const finalOutcome = cat.expected ? (correctCount > 0 ? "tp" : "fn") : (correctCount === cat.images.length ? "tn" : "fp");
+
+  const avgConf = confCount ? totalConf / confCount : 0;
+  const robustnessScore = (cat.images.length ? correctCount / cat.images.length : 0) * avgConf;
 
   return {
     id: cat.id, label: cat.label, expected: cat.expected,
     imageCount: cat.images.length,
     allDetections,
     inferenceMs: totalMs / cat.images.length,
-    avgConf:     confCount ? totalConf / confCount : 0,
-    outcome,
+    avgConf,
+    outcome: finalOutcome,
+    robustnessScore,
+    times: categoryTimes
   };
 }
 
 runBtn.onclick = async () => {
-  runBtn.disabled    = true;
+  runBtn.disabled = true;
   runCatBtn.disabled = true;
-  allResults         = [];
+  allResults = [];
+
+  const memStart = getHeapBytes();
+  let maxLat = 0;
+  let peakMem = 0;
+  let allTimes = [];
 
   for (const cat of manifest) {
     selectCategory(cat);
-    await new Promise(r => setTimeout(r, 50)); // let UI paint
+    await new Promise(r => setTimeout(r, 50));
     const result = await runCategory(cat);
-    if (result) allResults.push(result);
-    else allResults.push({ id: cat.id, label: cat.label, imageCount: 0, outcome: "pend", allDetections: [] });
+    if (result) {
+      allResults.push(result);
+      allTimes.push(...result.times);
+      maxLat = Math.max(maxLat, ...result.times);
+      peakMem = Math.max(peakMem, parseFloat(getHeapMB()));
+    }
     renderSidebar();
   }
 
-  runBtn.disabled    = false;
+  const memEnd = getHeapBytes();
+  sessionMeta = {
+    peakMem: peakMem.toFixed(1),
+    memDelta: ((memEnd - memStart) / 1048576).toFixed(2),
+    maxLatency: maxLat,
+    jitter: calculateJitter(allTimes)
+  };
+
+  runBtn.disabled = false;
   runCatBtn.disabled = false;
   resultsBtn.disabled = false;
   selectCategory(currentCat);
@@ -195,7 +267,7 @@ runBtn.onclick = async () => {
 runCatBtn.onclick = async () => {
   if (!currentCat) return;
   runCatBtn.disabled = true;
-  runBtn.disabled    = true;
+  runBtn.disabled = true;
   const result = await runCategory(currentCat);
   if (result) {
     const idx = allResults.findIndex(r => r.id === currentCat.id);
@@ -203,22 +275,22 @@ runCatBtn.onclick = async () => {
   }
   renderSidebar();
   runCatBtn.disabled = false;
-  runBtn.disabled    = false;
+  runBtn.disabled = false;
   if (allResults.length) resultsBtn.disabled = false;
 };
 
 resultsBtn.onclick = () => {
-  imageGrid.style.display      = "none";
+  imageGrid.style.display = "none";
   resultsSection.style.display = "block";
-  resultsSection.innerHTML     = `<h2>Summary report</h2>${buildSummaryTable(allResults)}`;
+  resultsSection.innerHTML = `<h2>Advanced Summary Report</h2>${buildSummaryTable(allResults, sessionMeta)}`;
 };
 
 function loadImageElement(src) {
   return new Promise((res, rej) => {
-    const img  = new Image();
-    img.onload  = () => res(img);
+    const img = new Image();
+    img.onload = () => res(img);
     img.onerror = rej;
-    img.src     = src;
+    img.src = src;
   });
 }
 

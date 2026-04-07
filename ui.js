@@ -40,17 +40,18 @@ export function getViolationReason(detections) {
 export function getOutcome(detections, expected) {
   const violated = !!getViolationReason(detections);
 
-  if (expected  &&  violated) return "pass";   // expected violation, caught it
-  if (!expected && !violated) return "pass";   // expected clean, confirmed clean
-  if (!expected &&  violated) return "fp";     // expected clean, wrongly flagged
-  return "fail";                               // expected violation, missed it
+  if (expected  &&  violated) return "tp"; // Phone expected & detected
+  if (!expected && !violated) return "tn"; // No phone expected & none detected
+  if (!expected &&  violated) return "fp"; // No phone expected but flagged
+  return "fn";                             // Phone expected but missed
 }
 
 export function badgeHTML(outcome, reasons) {
   const map = {
-    pass: ["badge-pass", "✓ Correct"],
-    fail: ["badge-fail", "✗ Missed"],
-    fp:   ["badge-fp",   "⚠ False +"],
+    tp:   ["badge-pass", "✓ TP"],
+    tn:   ["badge-pass", "✓ TN"],
+    fp:   ["badge-fp",   "⚠ FP"],
+    fn:   ["badge-fail", "✗ FN"],
     pend: ["badge-pend", "—"],
   };
   const [cls, txt] = map[outcome] || map.pend;
@@ -58,16 +59,18 @@ export function badgeHTML(outcome, reasons) {
   return `<span class="badge ${cls}"${tip}>${txt}</span>`;
 }
 
-export function buildSummaryTable(results) {
-  let pass = 0, fp = 0, fn = 0, times = [];
+export function buildSummaryTable(results, sessionMeta = {}) {
+  let tp = 0, tn = 0, fp = 0, fn = 0, times = [];
   const classCounts = Object.fromEntries(
     Object.values(DETECTED_CLASSES).map(c => [c.name, 0])
   );
 
   results.forEach(r => {
-    if (r.outcome === "pass") pass++;
-    if (r.outcome === "fp")   fp++;
-    if (r.outcome === "fail") fn++;
+    if (r.outcome === "tp") tp++;
+    else if (r.outcome === "tn") tn++;
+    else if (r.outcome === "fp") fp++;
+    else if (r.outcome === "fn") fn++;
+
     if (r.inferenceMs) times.push(r.inferenceMs);
     (r.allDetections || []).forEach(d => {
       if (d.className in classCounts) classCounts[d.className]++;
@@ -75,7 +78,7 @@ export function buildSummaryTable(results) {
   });
 
   const total = results.length;
-  const acc   = total ? ((pass / total) * 100).toFixed(0) : 0;
+  const accuracy = total ? (((tp + tn) / total) * 100).toFixed(1) : 0;
   const avgMs = times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—";
 
   const classColors = Object.fromEntries(
@@ -103,56 +106,53 @@ export function buildSummaryTable(results) {
     </div>`
   ).join("");
 
+  const systemHealth = `
+<h3 style="font-size:13px;color:#666;margin:30px 0 10px;text-transform:uppercase;letter-spacing:.06em">System Health & Stability</h3>
+<div class="summary-cards">
+  <div class="scard"><div class="scard-label">Peak Memory</div><div class="scard-val">${sessionMeta.peakMem || "—"} MB</div></div>
+  <div class="scard"><div class="scard-label">Memory Delta</div><div class="scard-val" style="color:${parseFloat(sessionMeta.memDelta) > 5 ? '#f87171' : '#3dd68c'}">${sessionMeta.memDelta || "—"} MB</div></div>
+  <div class="scard"><div class="scard-label">Max Latency</div><div class="scard-val">${sessionMeta.maxLatency ? sessionMeta.maxLatency.toFixed(1) : "—"} ms</div></div>
+  <div class="scard"><div class="scard-label">Inference Jitter</div><div class="scard-val">${sessionMeta.jitter ? sessionMeta.jitter.toFixed(2) : "—"} ms</div></div>
+</div>`;
+
   return `
 ${violationRules}
 <div class="summary-cards">
-  <div class="scard"><div class="scard-label">Accuracy</div><div class="scard-val" style="color:#3dd68c">${acc}%</div></div>
-  <div class="scard"><div class="scard-label">False positives</div><div class="scard-val" style="color:#ffb74d">${fp}</div></div>
-  <div class="scard"><div class="scard-label">Missed detections</div><div class="scard-val" style="color:#f28b82">${fn}</div></div>
+  <div class="scard"><div class="scard-label">Global Accuracy</div><div class="scard-val" style="color:#3dd68c">${accuracy}%</div></div>
+  <div class="scard"><div class="scard-label">Inference Jitter</div><div class="scard-val">${sessionMeta.jitter ? sessionMeta.jitter.toFixed(2) : "—"} ms</div></div>
+  <div class="scard"><div class="scard-label">True Positives</div><div class="scard-val" style="color:#3dd68c">${tp}</div></div>
   <div class="scard"><div class="scard-label">Avg inference</div><div class="scard-val">${avgMs} ms</div></div>
 </div>
 
-<h3 style="font-size:13px;color:#666;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em">Total detections by class</h3>
-<div class="summary-cards">${classPills}</div>
-
-<h3 style="font-size:13px;color:#666;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em">Per-category results</h3>
+<h3 style="font-size:13px;color:#666;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em">Dataset Analysis</h3>
 <table>
   <thead>
     <tr>
       <th>Category</th>
-      <th>Images</th>
       <th>Outcome</th>
-      <th>Violation reasons</th>
-      <th>Detected classes</th>
-      <th>Inference</th>
+      <th>Reliability (Robustness)</th>
+      <th>Avg Conf</th>
+      <th>Avg Inf</th>
     </tr>
   </thead>
   <tbody>
     ${results.map(r => {
-      const reasons     = getViolationReason(r.allDetections || []);
-      const foundClasses = [...new Set((r.allDetections || []).map(d => d.className))];
-      const classTags   = foundClasses.map(name =>
-        `<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:#1a1a1a;border:1px solid #333;color:${classColors[name] || '#aaa'}">${name}</span>`
-      ).join(" ");
-      const reasonTags  = reasons
-        ? reasons.map(reason => {
-            const color = reason === "cell phone" ? "#f87171"
-                        : reason === "laptop"     ? "#a78bfa"
-                        : reason === "book"        ? "#34d399"
-                        : "#60a5fa";
-            return `<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:#1a1a1a;border:1px solid ${color}44;color:${color}">${reason}</span>`;
-          }).join(" ")
-        : `<span style="color:#555;font-size:12px">none</span>`;
-
+      const robustness = (r.robustnessScore * 100).toFixed(1);
+      const scoreColor = robustness > 80 ? '#3dd68c' : robustness > 50 ? '#ffb74d' : '#f87171';
+      
       return `<tr>
         <td><b>${r.id}</b> — ${r.label}</td>
-        <td>${r.imageCount}</td>
-        <td>${badgeHTML(r.outcome, reasons)}</td>
-        <td style="padding:8px 12px">${reasonTags}</td>
-        <td style="padding:8px 12px">${classTags || '<span style="color:#555">—</span>'}</td>
-        <td>${r.inferenceMs ? r.inferenceMs.toFixed(1) + " ms" : "—"}</td>
+        <td>${badgeHTML(r.outcome)}</td>
+        <td><div style="font-weight:600;color:${scoreColor}">${robustness}%</div></td>
+        <td>${(r.avgConf * 100).toFixed(1)}%</td>
+        <td>${r.inferenceMs.toFixed(1)} ms</td>
       </tr>`;
     }).join("")}
   </tbody>
-</table>`;
+</table>
+
+${systemHealth}
+
+<h3 style="font-size:13px;color:#666;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em">Total detections by class</h3>
+<div class="summary-cards">${classPills}</div>`;
 }
