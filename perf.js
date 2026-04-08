@@ -70,3 +70,42 @@ export function getHeapBytes() {
 export function formatMs(ms) {
   return ms.toFixed(1) + " ms";
 }
+
+/**
+ * Initializes the Compute Pressure API to monitor system load.
+ * @param {Function} callback - Called when pressure state changes.
+ */
+export function initPressureObserver(callback) {
+  if (!('PressureObserver' in window)) {
+    console.warn("Compute Pressure API not supported in this browser.");
+    callback("N/A");
+    return;
+  }
+
+  try {
+    const observer = new PressureObserver((records) => {
+      // Get the latest record (usually includes 'cpu' and 'gpu' in modern versions)
+      const lastRecord = records[records.length - 1];
+      const state = lastRecord.state; // 'nominal', 'fair', 'serious', 'critical'
+      
+      // Map states to user-friendly status
+      const statusMap = {
+        'nominal': "🟢 Nom",
+        'fair': "🟡 Fair",
+        'serious': "🟠 High",
+        'critical': "🔴 Crit"
+      };
+      
+      callback(statusMap[state] || state);
+    });
+
+    // Start observing 'cpu' and 'gpu' (if supported)
+    observer.observe('cpu');
+    // Some browsers also support 'gpu' as a separate source
+    try { observer.observe('gpu'); } catch(e) {}
+
+  } catch (e) {
+    console.error("Failed to initialize PressureObserver", e);
+    callback("Err");
+  }
+}
