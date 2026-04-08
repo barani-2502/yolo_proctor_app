@@ -1,6 +1,8 @@
 import { loadModel, runInference, DETECTED_CLASSES } from "./runner.js";
-import { getHeapMB, formatMs, getSystemInfo, tickFPS, calculateJitter, getHeapBytes } from "./perf.js";
+import { getHeapMB, formatMs, getSystemInfo, tickFPS, calculateJitter, getHeapBytes, initPressureObserver } from "./perf.js";
 import { drawDetections, getOutcome, badgeHTML, buildSummaryTable } from "./ui.js";
+import { matchFiles, createDatasetCategory } from "./dataset.js";
+
 
 const MODEL_PATH = "models/yolo11n.onnx";
 
@@ -27,10 +29,16 @@ const pPost = document.getElementById("p-post");
 const pHeap = document.getElementById("p-heap");
 const pFPS = document.getElementById("p-fps");
 const pCPU = document.getElementById("p-cpu");
+const pRAM = document.getElementById("p-ram");
+const pPressure = document.getElementById("p-pressure");
+const pAppLoad = document.getElementById("p-appload");
 const pGPU = document.getElementById("p-gpu");
 const gpuToggle = document.getElementById("gpu-toggle");
 const cpuToggle = document.getElementById("cpu-toggle");
 const reloadWarn = document.getElementById("reload-warn");
+const uploadBtn = document.getElementById("upload-btn");
+const fileInput = document.getElementById("local-dataset-input");
+
 
 async function init() {
   manifest = await fetch("manifest.json").then(r => r.json());
@@ -39,10 +47,15 @@ async function init() {
 
   const info = getSystemInfo();
   if (pCPU) pCPU.textContent = info.cpu;
+  if (pRAM) pRAM.textContent = info.memory;
   if (pGPU) {
     pGPU.textContent = info.gpu.length > 15 ? info.gpu.substring(0, 15) + "..." : info.gpu;
     document.getElementById("gpu-container").title = info.gpu;
   }
+
+  initPressureObserver(status => {
+    if (pPressure) pPressure.textContent = status;
+  });
 }
 
 function renderSidebar() {
@@ -86,8 +99,19 @@ function renderImageGrid(cat) {
     return;
   }
   cat.images.forEach(filename => {
-    const src = `test-images/${getFolderName(cat.id)}/${filename}`;
+    let src = `test-images/${getFolderName(cat.id)}/${filename}`;
+    let expected = cat.expected;
+
+    if (cat.isLocal && cat.imageDetails) {
+      const detail = cat.imageDetails.find(d => d.filename === filename);
+      if (detail) {
+        src = detail.src;
+        expected = detail.expected;
+      }
+    }
+
     const card = document.createElement("div");
+
     card.className = "img-card";
     card.innerHTML = `
       <div class="img-card-header">
@@ -145,10 +169,10 @@ loadBtn.onclick = async () => {
     const activeEP = await loadModel(MODEL_PATH, backendPreference === "cpu");
     activeBackend = activeEP;
     const epDisplay = activeEP === "webgpu" ? "WebGPU" : "WASM";
-    
+
     modelBadge.textContent = `YOLOv11 Nano · ${epDisplay} Ready`;
     modelBadge.className = activeEP === "webgpu" ? "badge gpu-active" : "badge";
-    
+
     modelLoaded = true;
     runBtn.disabled = false;
     runCatBtn.disabled = false;
@@ -167,12 +191,26 @@ async function runCategory(cat) {
   let totalConf = 0, confCount = 0, totalMs = 0, correctCount = 0;
   let allDetections = [];
   let categoryTimes = [];
+  let busyMs = 0;
+  const startTime = performance.now();
 
   for (const filename of cat.images) {
-    const src = `test-images/${getFolderName(cat.id)}/${filename}`;
+    let src = `test-images/${getFolderName(cat.id)}/${filename}`;
+    let expected = cat.expected;
+
+    if (cat.isLocal && cat.imageDetails) {
+      const detail = cat.imageDetails.find(d => d.filename === filename);
+      if (detail) {
+        src = detail.src;
+        expected = detail.expected;
+      }
+    }
+
     const img = await loadImageElement(src);
     const { detections, inferenceMs, perf } = await runInference(img);
 
+    const stepBusy = perf.prep + perf.inference + perf.post;
+    busyMs += stepBusy;
     totalMs += inferenceMs;
     categoryTimes.push(inferenceMs);
     allDetections = allDetections.concat(detections);
@@ -181,7 +219,8 @@ async function runCategory(cat) {
     if (canvas) drawDetections(canvas, img, detections);
 
     // Per-image outcome badge
-    const outcome = getOutcome(detections, cat.expected);
+    const outcome = getOutcome(detections, expected);
+
     if (outcome === "tp" || outcome === "tn") correctCount++;
 
     const badge = document.getElementById(`badge-${cat.id}-${filename}`);
@@ -207,6 +246,12 @@ async function runCategory(cat) {
     pPost.textContent = formatMs(perf.post);
     pHeap.textContent = getHeapMB();
     if (pFPS) pFPS.textContent = tickFPS();
+
+    if (pAppLoad) {
+      const elapsed = performance.now() - startTime;
+      const load = (busyMs / elapsed) * 100;
+      pAppLoad.textContent = load.toFixed(1) + "%";
+    }
   }
 
   // Outcome mapped to standard TP/TN/FP/FN for the summary row
@@ -285,7 +330,38 @@ resultsBtn.onclick = () => {
   resultsSection.innerHTML = `<h2>Advanced Summary Report</h2>${buildSummaryTable(allResults, sessionMeta)}`;
 };
 
+uploadBtn.onclick = () => fileInput.click();
+
+fileInput.onchange = async () => {
+  if (!fileInput.files.length) return;
+  
+  loadingEl.style.display = "block";
+  loadingEl.textContent = "Scanning folder structure...";
+  
+  try {
+    const folderName = fileInput.files[0].webkitRelativePath.split('/')[0] || "Local Dataset";
+    const matched = await matchFiles(fileInput.files);
+    
+    if (matched.length === 0) {
+      alert("No images found in the selected folder.");
+      return;
+    }
+    
+    const localCat = await createDatasetCategory(folderName, matched);
+    manifest.push(localCat);
+    renderSidebar();
+    selectCategory(localCat);
+    
+    loadingEl.style.display = "none";
+  } catch (e) {
+    console.error(e);
+    alert("Failed to process dataset: " + e.message);
+    loadingEl.style.display = "none";
+  }
+};
+
 function loadImageElement(src) {
+
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => res(img);

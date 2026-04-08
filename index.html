@@ -432,7 +432,14 @@
         </div>
         <button id="load-btn">Load model</button>
         <span class="reload-warn" id="reload-warn">Reload required ⚠</span>
+        
+        <div style="border-left: 1px solid #eee; margin:0 8px; height:24px"></div>
+        
+        <input type="file" id="local-dataset-input" webkitdirectory directory multiple style="display:none" />
+        <button id="upload-btn" title="Upload a YOLO dataset folder (test/val)">Test Local Dataset</button>
+        
         <button id="run-btn" class="primary" disabled>Run all</button>
+
         <button id="run-cat-btn" disabled>Run this category</button>
         <button id="results-btn" disabled>View summary</button>
         <div id="perf-bar">
@@ -441,7 +448,10 @@
           <span>Post <b id="p-post">—</b></span>
           <span>Heap <b id="p-heap">—</b></span>
           <span>FPS <b id="p-fps">—</b></span>
-          <span>CPU <b id="p-cpu">—</b></span>
+          <span>Cores <b id="p-cpu">—</b></span>
+          <span>RAM <b id="p-ram">—</b></span>
+          <span>Pressure <b id="p-pressure">—</b></span>
+          <span>App Load <b id="p-appload">—</b></span>
           <span id="gpu-container">GPU <b id="p-gpu">—</b></span>
         </div>
       </div>
