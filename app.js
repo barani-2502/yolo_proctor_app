@@ -188,7 +188,8 @@ loadBtn.onclick = async () => {
 async function runCategory(cat) {
   if (!cat.images.length) return null;
 
-  let totalConf = 0, confCount = 0, totalMs = 0, correctCount = 0;
+  let totalConf = 0, confCount = 0, totalMs = 0;
+  let imgStats = { tp: 0, tn: 0, fp: 0, fn: 0 };
   let allDetections = [];
   let categoryTimes = [];
   let busyMs = 0;
@@ -220,12 +221,12 @@ async function runCategory(cat) {
 
     // Per-image outcome badge
     const outcome = getOutcome(detections, expected);
-
-    if (outcome === "tp" || outcome === "tn") correctCount++;
+    imgStats[outcome]++;
 
     const badge = document.getElementById(`badge-${cat.id}-${filename}`);
     if (badge) {
-      badge.className = `badge badge-${outcome === "tp" || outcome === "tn" ? "pass" : outcome === "fp" ? "fp" : "fail"}`;
+      const isCorrect = (outcome === "tp" || outcome === "tn");
+      badge.className = `badge badge-${isCorrect ? "pass" : outcome === "fp" ? "fp" : "fail"}`;
       const badgeData = badgeHTML(outcome);
       badge.textContent = badgeData.replace(/<[^>]*>/g, ""); // strip HTML for simple textContent
     }
@@ -255,7 +256,8 @@ async function runCategory(cat) {
   }
 
   // Outcome mapped to standard TP/TN/FP/FN for the summary row
-  const finalOutcome = cat.expected ? (correctCount > 0 ? "tp" : "fn") : (correctCount === cat.images.length ? "tn" : "fp");
+  const correctCount = imgStats.tp + imgStats.tn;
+  const finalOutcome = cat.expected ? (imgStats.tp > 0 ? "tp" : "fn") : (correctCount === cat.images.length ? "tn" : "fp");
 
   const avgConf = confCount ? totalConf / confCount : 0;
   const robustnessScore = (cat.images.length ? correctCount / cat.images.length : 0) * avgConf;
@@ -268,6 +270,7 @@ async function runCategory(cat) {
     avgConf,
     outcome: finalOutcome,
     robustnessScore,
+    imgStats,
     times: categoryTimes
   };
 }

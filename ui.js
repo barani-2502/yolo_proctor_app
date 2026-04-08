@@ -66,19 +66,26 @@ export function buildSummaryTable(results, sessionMeta = {}) {
   );
 
   results.forEach(r => {
-    if (r.outcome === "tp") tp++;
-    else if (r.outcome === "tn") tn++;
-    else if (r.outcome === "fp") fp++;
-    else if (r.outcome === "fn") fn++;
-
+    if (r.imgStats) {
+      tp += r.imgStats.tp;
+      tn += r.imgStats.tn;
+      fp += r.imgStats.fp;
+      fn += r.imgStats.fn;
+    }
     if (r.inferenceMs) times.push(r.inferenceMs);
     (r.allDetections || []).forEach(d => {
       if (d.className in classCounts) classCounts[d.className]++;
     });
   });
 
-  const total = results.length;
+  const total = tp + tn + fp + fn;
   const accuracy = total ? (((tp + tn) / total) * 100).toFixed(1) : 0;
+  const precision = (tp + fp) > 0 ? (tp / (tp + fp) * 100).toFixed(1) : 0;
+  const recall = (tp + fn) > 0 ? (tp / (tp + fn) * 100).toFixed(1) : 0;
+  const f1 = (parseFloat(precision) + parseFloat(recall)) > 0 
+    ? (2 * (precision * recall) / (parseFloat(precision) + parseFloat(recall))).toFixed(1) 
+    : 0;
+
   const avgMs = times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—";
 
   const classColors = Object.fromEntries(
@@ -118,10 +125,17 @@ export function buildSummaryTable(results, sessionMeta = {}) {
   return `
 ${violationRules}
 <div class="summary-cards">
-  <div class="scard"><div class="scard-label">Global Accuracy</div><div class="scard-val" style="color:#3dd68c">${accuracy}%</div></div>
+  <div class="scard"><div class="scard-label">Image Accuracy</div><div class="scard-val" style="color:#3dd68c">${accuracy}%</div></div>
+  <div class="scard"><div class="scard-label">Precision (FP Rate)</div><div class="scard-val" style="color:#60a5fa">${precision}%</div></div>
+  <div class="scard"><div class="scard-label">Recall (Catch Rate)</div><div class="scard-val" style="color:#a78bfa">${recall}%</div></div>
+  <div class="scard"><div class="scard-label">F1-Score</div><div class="scard-val">${f1}</div></div>
+</div>
+
+<div class="summary-cards" style="margin-top:12px">
+  <div class="scard"><div class="scard-label">Avg Inference</div><div class="scard-val">${avgMs} ms</div></div>
   <div class="scard"><div class="scard-label">Inference Jitter</div><div class="scard-val">${sessionMeta.jitter ? sessionMeta.jitter.toFixed(2) : "—"} ms</div></div>
   <div class="scard"><div class="scard-label">True Positives</div><div class="scard-val" style="color:#3dd68c">${tp}</div></div>
-  <div class="scard"><div class="scard-label">Avg inference</div><div class="scard-val">${avgMs} ms</div></div>
+  <div class="scard"><div class="scard-label">False Negatives</div><div class="scard-val" style="color:#f87171">${fn}</div></div>
 </div>
 
 <h3 style="font-size:13px;color:#666;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em">Dataset Analysis</h3>
