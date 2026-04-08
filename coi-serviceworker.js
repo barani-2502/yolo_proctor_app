@@ -34,7 +34,8 @@ if (typeof window === 'undefined') {
 
     if ('serviceWorker' in navigator && !isDev) {
         window.addEventListener("load", () => {
-            navigator.serviceWorker.register(window.location.pathname + (window.location.pathname.endsWith("/") ? "" : "/") + "coi-serviceworker.js")
+            const swPath = script.src; // Get absolute path of this script
+            navigator.serviceWorker.register(swPath)
                 .then(registration => {
                     registration.addEventListener("updatefound", () => {
                         if (navigator.serviceWorker.controller) {

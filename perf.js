@@ -99,10 +99,8 @@ export function initPressureObserver(callback) {
       callback(statusMap[state] || state);
     });
 
-    // Start observing 'cpu' and 'gpu' (if supported)
+    // Start observing 'cpu'
     observer.observe('cpu');
-    // Some browsers also support 'gpu' as a separate source
-    try { observer.observe('gpu'); } catch(e) {}
 
   } catch (e) {
     console.error("Failed to initialize PressureObserver", e);
