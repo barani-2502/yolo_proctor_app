@@ -11,7 +11,7 @@ let currentCat = null;
 let allResults = [];
 let modelLoaded = false;
 let sessionMeta = {};
-let backendPreference = "gpu";
+let backendPreference = localStorage.getItem("backend-preference") === "cpu" ? "cpu" : "gpu";
 let activeBackend = null;
 
 const catList = document.getElementById("cat-list");
@@ -56,6 +56,15 @@ async function init() {
   initPressureObserver(status => {
     if (pPressure) pPressure.textContent = status;
   });
+
+  // Sync UI with backend preference
+  if (backendPreference === "cpu") {
+    cpuToggle.classList.add("active");
+    gpuToggle.classList.remove("active");
+  } else {
+    gpuToggle.classList.add("active");
+    cpuToggle.classList.remove("active");
+  }
 }
 
 function renderSidebar() {
@@ -136,30 +145,22 @@ function renderImageGrid(cat) {
 }
 
 gpuToggle.onclick = () => {
+  if (backendPreference === "gpu") return;
   backendPreference = "gpu";
+  localStorage.setItem("backend-preference", "gpu");
   gpuToggle.classList.add("active");
   cpuToggle.classList.remove("active");
-  checkReloadRequirement();
+  if (modelLoaded) window.location.reload();
 };
 
 cpuToggle.onclick = () => {
+  if (backendPreference === "cpu") return;
   backendPreference = "cpu";
+  localStorage.setItem("backend-preference", "cpu");
   cpuToggle.classList.add("active");
   gpuToggle.classList.remove("active");
-  checkReloadRequirement();
+  if (modelLoaded) window.location.reload();
 };
-
-function checkReloadRequirement() {
-  if (modelLoaded && activeBackend !== (backendPreference === "cpu" ? "wasm" : "webgpu")) {
-    reloadWarn.style.display = "inline";
-    runBtn.disabled = true;
-    runCatBtn.disabled = true;
-  } else if (modelLoaded) {
-    reloadWarn.style.display = "none";
-    runBtn.disabled = false;
-    runCatBtn.disabled = false;
-  }
-}
 
 loadBtn.onclick = async () => {
   loadingEl.style.display = "block";
@@ -176,7 +177,6 @@ loadBtn.onclick = async () => {
     modelLoaded = true;
     runBtn.disabled = false;
     runCatBtn.disabled = false;
-    reloadWarn.style.display = "none";
     loadingEl.style.display = "none";
   } catch (e) {
     loadingEl.textContent = "Failed to load model. Check console for details.";

@@ -211,19 +211,15 @@ header span.gpu-active {
   font-size: 11px !important;
   font-weight: 500;
   color: #777;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .backend-select button.active {
-  background: #fff !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  color: #111 !important;
+  background: #1d4ed8 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.2);
 }
 
-.reload-warn {
-  font-size: 11px;
-  color: #ff9800;
-  display: none;
-}
 
 #perf-bar {
   margin-left: auto;
