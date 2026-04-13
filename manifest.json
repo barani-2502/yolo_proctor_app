@@ -38,13 +38,16 @@
     "id": "T4",
     "label": "No phone",
     "expected": false,
-    "images": []
+    "images": [
+      "Screenshot 2026-04-13 113158.png"
+    ]
   },
   {
     "id": "T5",
     "label": "Hand near face (no phone)",
     "expected": false,
     "images": [
+      "Screenshot 2026-04-08 152536.png",
       "image.webp"
     ]
   },
@@ -69,6 +72,7 @@
     "label": "Multiple people",
     "expected": true,
     "images": [
+      "Screenshot 2026-04-13 113559.png",
       "image (1).webp"
     ]
   },
@@ -88,6 +92,7 @@
     "label": "Phone below frame",
     "expected": false,
     "images": [
+      "Screenshot 2026-04-08 151741.png",
       "image (8).png"
     ]
   }
