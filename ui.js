@@ -149,6 +149,11 @@ ${violationRules}
   <div class="scard"><div class="scard-label">False Negatives</div><div class="scard-val" style="color:#f87171">${fn}</div></div>
 </div>
 
+${systemHealth}
+
+<h3 style="font-size:13px;color:#666;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em">Total detections by class</h3>
+<div class="summary-cards">${classPills}</div>
+
 <h3 style="font-size:13px;color:#666;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em">Dataset Analysis</h3>
 <table>
   <thead>
@@ -174,10 +179,5 @@ ${violationRules}
       </tr>`;
     }).join("")}
   </tbody>
-</table>
-
-${systemHealth}
-
-<h3 style="font-size:13px;color:#666;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em">Total detections by class</h3>
-<div class="summary-cards">${classPills}</div>`;
+</table>`;
 }
