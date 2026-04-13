@@ -47,8 +47,7 @@
     "label": "Hand near face (no phone)",
     "expected": false,
     "images": [
-      "Screenshot 2026-04-08 152536.png",
-      "image.webp"
+      "Screenshot 2026-04-08 152536.png"
     ]
   },
   {
@@ -72,8 +71,7 @@
     "label": "Multiple people",
     "expected": true,
     "images": [
-      "Screenshot 2026-04-13 113559.png",
-      "image (1).webp"
+      "Screenshot 2026-04-13 113559.png"
     ]
   },
   {
@@ -92,8 +90,7 @@
     "label": "Phone below frame",
     "expected": false,
     "images": [
-      "Screenshot 2026-04-08 151741.png",
-      "image (8).png"
+      "Screenshot 2026-04-08 151741.png"
     ]
   }
 ]
