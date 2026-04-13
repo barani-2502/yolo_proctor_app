@@ -303,7 +303,8 @@ runBtn.onclick = async () => {
     peakMem: peakMem.toFixed(1),
     memDelta: ((memEnd - memStart) / 1048576).toFixed(2),
     maxLatency: maxLat,
-    jitter: calculateJitter(allTimes)
+    jitter: calculateJitter(allTimes),
+    backend: activeBackend === "webgpu" ? "WebGPU" : "WASM"
   };
 
   runBtn.disabled = false;

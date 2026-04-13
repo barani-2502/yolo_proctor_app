@@ -79,7 +79,9 @@ export function buildSummaryTable(results, sessionMeta = {}) {
   });
 
   const total = tp + tn + fp + fn;
-  const accuracy = total ? (((tp + tn) / total) * 100).toFixed(1) : 0;
+  const totalCorrect = tp + tn;
+  const totalIncorrect = fp + fn;
+  const accuracy = total ? ((totalCorrect / total) * 100).toFixed(1) : 0;
   const precision = (tp + fp) > 0 ? (tp / (tp + fp) * 100).toFixed(1) : 0;
   const recall = (tp + fn) > 0 ? (tp / (tp + fn) * 100).toFixed(1) : 0;
   const f1 = (parseFloat(precision) + parseFloat(recall)) > 0 
@@ -116,25 +118,34 @@ export function buildSummaryTable(results, sessionMeta = {}) {
   const systemHealth = `
 <h3 style="font-size:13px;color:#666;margin:30px 0 10px;text-transform:uppercase;letter-spacing:.06em">System Health & Stability</h3>
 <div class="summary-cards">
-  <div class="scard"><div class="scard-label">Peak Memory</div><div class="scard-val">${sessionMeta.peakMem || "—"} MB</div></div>
   <div class="scard"><div class="scard-label">Memory Delta</div><div class="scard-val" style="color:${parseFloat(sessionMeta.memDelta) > 5 ? '#f87171' : '#3dd68c'}">${sessionMeta.memDelta || "—"} MB</div></div>
   <div class="scard"><div class="scard-label">Max Latency</div><div class="scard-val">${sessionMeta.maxLatency ? sessionMeta.maxLatency.toFixed(1) : "—"} ms</div></div>
   <div class="scard"><div class="scard-label">Inference Jitter</div><div class="scard-val">${sessionMeta.jitter ? sessionMeta.jitter.toFixed(2) : "—"} ms</div></div>
+  <div class="scard"><div class="scard-label">Backend Provider</div><div class="scard-val" style="font-size:16px;color:#60a5fa">${sessionMeta.backend || "Auto"}</div></div>
 </div>`;
 
   return `
 ${violationRules}
+<h3 style="font-size:13px;color:#666;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em">Session Performance & Correctness</h3>
 <div class="summary-cards">
-  <div class="scard"><div class="scard-label">Image Accuracy</div><div class="scard-val" style="color:#3dd68c">${accuracy}%</div></div>
-  <div class="scard"><div class="scard-label">Precision (FP Rate)</div><div class="scard-val" style="color:#60a5fa">${precision}%</div></div>
-  <div class="scard"><div class="scard-label">Recall (Catch Rate)</div><div class="scard-val" style="color:#a78bfa">${recall}%</div></div>
+  <div class="scard"><div class="scard-label">Correct Samples</div><div class="scard-val" style="color:#3dd68c">${totalCorrect} / ${total}</div></div>
+  <div class="scard"><div class="scard-label">Incorrect Samples</div><div class="scard-val" style="color:#f87171">${totalIncorrect} / ${total}</div></div>
+  <div class="scard"><div class="scard-label">Total Accuracy</div><div class="scard-val">${accuracy}%</div></div>
   <div class="scard"><div class="scard-label">F1-Score</div><div class="scard-val">${f1}</div></div>
 </div>
 
-<div class="summary-cards" style="margin-top:12px">
+<div class="summary-cards" style="margin-top:-10px">
+  <div class="scard"><div class="scard-label">Precision (FP Rate)</div><div class="scard-val" style="color:#60a5fa">${precision}%</div></div>
+  <div class="scard"><div class="scard-label">Recall (Catch Rate)</div><div class="scard-val" style="color:#a78bfa">${recall}%</div></div>
   <div class="scard"><div class="scard-label">Avg Inference</div><div class="scard-val">${avgMs} ms</div></div>
-  <div class="scard"><div class="scard-label">Inference Jitter</div><div class="scard-val">${sessionMeta.jitter ? sessionMeta.jitter.toFixed(2) : "—"} ms</div></div>
+  <div class="scard"><div class="scard-label">Peak Memory</div><div class="scard-val">${sessionMeta.peakMem || "—"} MB</div></div>
+</div>
+
+<h3 style="font-size:13px;color:#666;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.06em">Classification Matrix</h3>
+<div class="summary-cards">
   <div class="scard"><div class="scard-label">True Positives</div><div class="scard-val" style="color:#3dd68c">${tp}</div></div>
+  <div class="scard"><div class="scard-label">True Negatives</div><div class="scard-val" style="color:#3dd68c">${tn}</div></div>
+  <div class="scard"><div class="scard-label">False Positives</div><div class="scard-val" style="color:#f87171">${fp}</div></div>
   <div class="scard"><div class="scard-label">False Negatives</div><div class="scard-val" style="color:#f87171">${fn}</div></div>
 </div>
 

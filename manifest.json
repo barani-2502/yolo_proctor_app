@@ -10,7 +10,9 @@
       "Screenshot 2026-04-06 173410.png",
       "Screenshot 2026-04-06 173443.png",
       "Screenshot 2026-04-06 173749.png",
-      "Screenshot 2026-04-06 173919.png"
+      "Screenshot 2026-04-06 173919.png",
+      "Screenshot 2026-04-13 124115.png",
+      "Screenshot 2026-04-13 124646.png"
     ]
   },
   {
@@ -23,6 +25,10 @@
       "Screenshot 2026-04-06 174808.png",
       "Screenshot 2026-04-06 175046.png",
       "Screenshot 2026-04-06 175417.png",
+      "Screenshot 2026-04-13 125753.png",
+      "Screenshot 2026-04-13 125916.png",
+      "Screenshot 2026-04-13 130315.png",
+      "Screenshot 2026-04-13 130814.png",
       "final 2_mp4-1606.jpg"
     ]
   },
@@ -31,6 +37,14 @@
     "label": "Phone in hand (not in use)",
     "expected": true,
     "images": [
+      "Screenshot 2026-04-13 130448.png",
+      "Screenshot 2026-04-13 130626.png",
+      "Screenshot 2026-04-13 130902.png",
+      "Screenshot 2026-04-13 130934.png",
+      "Screenshot 2026-04-13 131117.png",
+      "Screenshot 2026-04-13 131136.png",
+      "Screenshot 2026-04-13 135620.png",
+      "Screenshot 2026-04-13 140252.png",
       "image.jpeg"
     ]
   },
@@ -39,7 +53,14 @@
     "label": "No phone",
     "expected": false,
     "images": [
-      "Screenshot 2026-04-13 113158.png"
+      "Screenshot 2026-04-13 113158.png",
+      "Screenshot 2026-04-13 143745.png",
+      "Screenshot 2026-04-13 150116.png",
+      "Screenshot 2026-04-13 154611.png",
+      "Screenshot 2026-04-13 155129.png",
+      "Screenshot 2026-04-13 155201.png",
+      "Screenshot 2026-04-13 160600.png",
+      "Screenshot 2026-04-13 160635.png"
     ]
   },
   {
@@ -47,7 +68,16 @@
     "label": "Hand near face (no phone)",
     "expected": false,
     "images": [
-      "Screenshot 2026-04-08 152536.png"
+      "Screenshot 2026-04-08 152301.png",
+      "Screenshot 2026-04-08 152324.png",
+      "Screenshot 2026-04-08 152536.png",
+      "Screenshot 2026-04-08 152607.png",
+      "Screenshot 2026-04-08 153254.png",
+      "Screenshot 2026-04-13 144201.png",
+      "Screenshot 2026-04-13 152531.png",
+      "Screenshot 2026-04-13 152549.png",
+      "Screenshot 2026-04-13 152602.png",
+      "Screenshot 2026-04-13 152645.png"
     ]
   },
   {
@@ -55,6 +85,13 @@
     "label": "Low light",
     "expected": true,
     "images": [
+      "Screenshot 2026-04-13 142129.png",
+      "Screenshot 2026-04-13 142710.png",
+      "Screenshot 2026-04-13 142922.png",
+      "Screenshot 2026-04-13 142952.png",
+      "Screenshot 2026-04-13 143206.png",
+      "Screenshot 2026-04-13 143320.png",
+      "Screenshot 2026-04-13 143444.png",
       "image (6).png"
     ]
   },
@@ -63,6 +100,15 @@
     "label": "Occluded phone",
     "expected": true,
     "images": [
+      "Screenshot 2026-04-08 153254.png",
+      "Screenshot 2026-04-08 153743.png",
+      "Screenshot 2026-04-13 125312.png",
+      "Screenshot 2026-04-13 141748.png",
+      "Screenshot 2026-04-13 141806.png",
+      "Screenshot 2026-04-13 142152.png",
+      "Screenshot 2026-04-13 150328.png",
+      "Screenshot 2026-04-13 150909.png",
+      "Screenshot 2026-04-13 155425.png",
       "image (7).png"
     ]
   },
@@ -71,7 +117,14 @@
     "label": "Multiple people",
     "expected": true,
     "images": [
-      "Screenshot 2026-04-13 113559.png"
+      "Screenshot 2026-04-13 140228.png",
+      "Screenshot 2026-04-13 140344.png",
+      "Screenshot 2026-04-13 141848.png",
+      "Screenshot 2026-04-13 152835.png",
+      "Screenshot 2026-04-13 153123.png",
+      "Screenshot 2026-04-13 153157.png",
+      "Screenshot 2026-04-13 153218.png",
+      "Screenshot 2026-04-13 153416.png"
     ]
   },
   {
@@ -82,7 +135,12 @@
       "Screenshot 2026-04-06 175801.png",
       "Screenshot 2026-04-06 175825.png",
       "Screenshot 2026-04-06 175844.png",
-      "Screenshot 2026-04-06 175909.png"
+      "Screenshot 2026-04-06 175909.png",
+      "Screenshot 2026-04-13 125206.png",
+      "Screenshot 2026-04-13 140401.png",
+      "Screenshot 2026-04-13 151251.png",
+      "Screenshot 2026-04-13 154338.png",
+      "Screenshot 2026-04-13 155323.png"
     ]
   },
   {
@@ -90,7 +148,14 @@
     "label": "Phone below frame",
     "expected": false,
     "images": [
-      "Screenshot 2026-04-08 151741.png"
+      "Screenshot 2026-04-08 151727.png",
+      "Screenshot 2026-04-08 151741.png",
+      "Screenshot 2026-04-13 151859.png",
+      "Screenshot 2026-04-13 152039.png",
+      "Screenshot 2026-04-13 152051.png",
+      "Screenshot 2026-04-13 152111.png",
+      "Screenshot 2026-04-13 152135.png",
+      "Screenshot 2026-04-13 152153.png"
     ]
   }
 ]
